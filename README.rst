@@ -4,8 +4,7 @@ Arctic Tern: Simple Postgres migrations for Python
 .. image:: https://upload.wikimedia.org/wikipedia/commons/2/29/2009_07_02_-_Arctic_tern_on_Farne_Islands_-_The_blue_rope_demarcates_the_visitors%27_path.JPG
     :target: https://en.wikipedia.org/wiki/Arctic_tern
 
-Requests is the only *Non-GMO* HTTP library for Python, safe for human
-consumption.
+You can be strongly migratory, too!
 
 Feature Support
 ---------------
@@ -21,7 +20,7 @@ Arctic Tern officially supports Python 3.6+
 Installation
 ------------
 
-To install Requests, simply use `pip install arctic-tern`
+To install Requests, simply `pip install arctic-tern`
 
 Documentation
 -------------
