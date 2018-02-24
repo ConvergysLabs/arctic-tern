@@ -1,16 +1,45 @@
+import os
 import psycopg2.extras
-import psycopg2.extensions
+from psycopg2.extensions import connection
 
-with open('../tests/scripts/1.sql') as f:
-    for line in f.readlines():
-        print(line)
 
-conn: psycopg2.extensions.connection = psycopg2.connect(dbname='mig', user='postgres', password='root')
+def migrate(dir: str, schema: str = None, dsn: str = None, **kwargs):
+    conn: connection = psycopg2.connect(dsn, **kwargs)
+    sql_files = [f for f in os.listdir(dir) if f.endswith('.sql')]
+    for sql_file in sql_files:
+        print('Importing ' + sql_file)
+        abs_api_dir = os.path.abspath(dir)
+        full = os.path.join(abs_api_dir, sql_file)
+        with open(full) as file:
+            _execute_with_schema(conn, schema, file.read())
+            # with conn.cursor() as curs:
+            #     if schema:
+            #         curs.execute('SET search_path TO %s', schema)
+            #     curs.execute(file.read())
+        conn.commit()
 
-with conn:
-    with conn.cursor() as curs: # type: psycopg2.extensions.cursor
-        curs.execute('SET search_path TO tern')
-        psycopg2.extras.register_uuid()
-        curs.execute(open('../tests/scripts/1.sql').read())
+    conn.close()
 
-conn.close()
+
+def _prepare(conn: connection, schema: str):
+    with conn.cursor() as curs:
+        create = """CREATE TABLE arctic_tern_migrations IF NOT EXISTS
+                    (
+                        timestamp_ NOT NULL PRIMARY KEY,
+                        file_name varchar,
+                        sha1 char(40)
+                    );"""
+
+    pass
+
+
+def _execute_with_schema(conn: connection, schema: str, *args, **kwargs):
+    with conn.cursor() as curs:
+        if schema:
+            curs.execute('SET search_path TO %s', [schema])
+        curs.execute(*args, **kwargs)
+
+
+if __name__ == "__main__":
+    migrate('../tests/scripts', dbname='mig', user='postgres', password='root')
+    migrate('../tests/scripts', dbname='mig', user='postgres', password='root', schema='tern')
