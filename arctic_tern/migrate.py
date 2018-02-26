@@ -34,12 +34,11 @@ def _get_sql_file(dir: str):
 def _hash(dir, file):
     abs_dir = os.path.abspath(dir)
     full = os.path.join(abs_dir, file)
-    sha256 = hashlib.sha256()
+    sha3 = hashlib.sha3_224()
     with open(full, "rb") as stream:
         for chunk in iter(lambda: stream.read(65536), b""):
-            sha256.update(chunk)
-    hexdigest = sha256.hexdigest()
-    return hexdigest
+            sha3.update(chunk)
+    return sha3.hexdigest()
 
 
 def _prepare(conn: connection, schema: str):
@@ -47,7 +46,7 @@ def _prepare(conn: connection, schema: str):
                 (
                     stamp NOT NULL PRIMARY KEY,
                     file_name varchar,
-                    sha1 char(64)
+                    sha1 char(56)
                 );"""
     _execute_with_schema(conn, schema, create)
 
