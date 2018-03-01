@@ -1,56 +1,64 @@
 import hashlib
 import os
+from typing import List
 
 import psycopg2.extras
 from psycopg2.extensions import connection, cursor
 
-from arctic_tern.filename import parse_file_name
+from arctic_tern.filename import parse_file_name, MigrationFile
 
 
 def migrate(dir: str, schema: str = None, dsn: str = None, **kwargs):
     conn: connection = psycopg2.connect(dsn, **kwargs)
-    sql_files = [f for f in os.listdir(dir) if f.endswith('.sql')]
-    for sql_file in sql_files:
-        print('Importing ' + sql_file)
-        abs_api_dir = os.path.abspath(dir)
-        full = os.path.join(abs_api_dir, sql_file)
-        with open(full) as file:
-            _execute_with_schema(conn, schema, file.read())
+    _prepare_meta_table(conn, schema)
+
+    for sql_file in _get_sql_files(dir):
+        curs = _get_schema_cursor(conn, schema)
+        _execute_file(sql_file, curs)
+        curs.close()
         conn.commit()
 
     conn.close()
 
 
-def _get_sql_file(dir: str):
-    l = []
-    for fn in os.listdir(dir):
-        v = parse_file_name(fn)
-        if v:
-            v.append(_hash(dir, fn))
-            l.append(v)
-    return l
+def _execute_file(migration_file: MigrationFile, curs: cursor):
+    with open(migration_file.path) as stream:
+        curs.execute(stream.read())
+
+    t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""
+    curs.execute(t, [migration_file.stamp, migration_file.name, migration_file.hash_])
 
 
-def _hash(dir, file):
+def _get_sql_files(dir: str) -> List[MigrationFile]:
     abs_dir = os.path.abspath(dir)
-    full = os.path.join(abs_dir, file)
+    file_list = []
+    for fn in os.listdir(dir):
+        file_info = parse_file_name(fn)
+        if file_info:
+            full_path = os.path.join(abs_dir, fn)
+            file_info.path = full_path
+            file_info.hash_ = _hash(full_path)
+            file_list.append(file_info)
+    return file_list
+
+
+def _hash(file: str) -> str:
     sha3 = hashlib.sha3_224()
-    with open(full, "rb") as stream:
+    with open(file, "rb") as stream:
         for chunk in iter(lambda: stream.read(65536), b""):
             sha3.update(chunk)
     return sha3.hexdigest()
 
 
-def _prepare(conn: connection, schema: str):
-    create = """CREATE TABLE arctic_tern_migrations IF NOT EXISTS
+def _prepare_meta_table(conn: connection, schema: str):
+    create = """CREATE TABLE IF NOT EXISTS arctic_tern_migrations
                 (
-                    stamp NOT NULL PRIMARY KEY,
+                    stamp bigint NOT NULL PRIMARY KEY,
                     file_name varchar,
-                    sha1 char(56)
+                    sha3 char(56),
+                    migrate_time timestamptz
                 );"""
     _execute_with_schema(conn, schema, create)
-
-    pass
 
 
 def _execute_with_schema(conn: connection, schema: str, *args, **kwargs):
@@ -60,7 +68,14 @@ def _execute_with_schema(conn: connection, schema: str, *args, **kwargs):
         curs.execute(*args, **kwargs)
 
 
+def _get_schema_cursor(conn: connection, schema: str = None) -> cursor:
+    curs = conn.cursor()
+    if schema:
+        curs.execute('SET search_path TO %s', [schema])
+    return curs
+
+
 if __name__ == "__main__":
-    # migrate('../tests/scripts', dbname='mig', user='postgres', password='root')
-    # migrate('../tests/scripts', dbname='mig', user='postgres', password='root', schema='tern')
-    print(_get_sql_file('../tests/scripts'))
+    migrate('../tests/scripts', dbname='mig', user='postgres', password='root')
+    migrate('../tests/scripts', dbname='mig', user='postgres', password='root', schema='tern')
+    # print(_get_sql_files('../tests/scripts'))
