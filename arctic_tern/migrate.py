@@ -11,12 +11,22 @@ from arctic_tern.filename import parse_file_name, MigrationFile
 def migrate(dir: str, schema: str = None, dsn: str = None, **kwargs):
     conn: connection = psycopg2.connect(dsn, **kwargs)
     _prepare_meta_table(conn, schema)
+    pm = _fetch_previous_migrations(_get_schema_cursor(conn, schema))
+    pmi = iter(pm)
+    cm = next(pmi)
 
     for sql_file in _get_sql_files(dir):
-        curs = _get_schema_cursor(conn, schema)
-        _execute_file(sql_file, curs)
-        curs.close()
-        conn.commit()
+        if sql_file.is_equal(cm):
+            print('Skipping {}'.format(sql_file.path))
+            try:
+                cm = next(pmi)
+            except StopIteration:
+                cm = None
+        else:
+            curs = _get_schema_cursor(conn, schema)
+            _execute_file(sql_file, curs)
+            curs.close()
+            conn.commit()
 
     conn.close()
 
@@ -59,6 +69,21 @@ def _prepare_meta_table(conn: connection, schema: str):
                     migrate_time timestamptz
                 );"""
     _execute_with_schema(conn, schema, create)
+
+
+def _fetch_previous_migrations(curs: cursor):
+    sql = """SELECT * FROM arctic_tern_migrations"""
+    curs.execute(sql)
+
+    migrations = []
+    for row in curs:
+        stamp = row[0]
+        name = row[1]
+        sha3 = row[2]
+        mf = MigrationFile(stamp, name, sha3)
+        migrations.append(mf)
+
+    return migrations
 
 
 def _execute_with_schema(conn: connection, schema: str, *args, **kwargs):

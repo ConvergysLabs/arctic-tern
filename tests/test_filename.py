@@ -11,9 +11,9 @@ import pytest
     ("2018022601.sql", [2018022601, None]),
 ])
 def test_hyphen(test_filename, expected):
-    val = parse_file_name(test_filename)
-    assert val[0] == expected[0]
-    assert val[1] == expected[1]
+    migration_file = parse_file_name(test_filename)
+    assert migration_file.stamp == expected[0]
+    assert migration_file.name == expected[1]
 
 
 @pytest.mark.parametrize("test_filename", [
