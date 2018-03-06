@@ -9,8 +9,6 @@ You can be strongly migratory, too!
 Feature Support
 ---------------
 
-Requests is ready for today's web.
-
 - Plain SQL update scripts
 - Timestamped update scripts
 - Code-level integration (no CLI needed)
