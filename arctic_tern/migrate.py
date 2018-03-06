@@ -8,12 +8,14 @@ from psycopg2.extensions import connection, cursor
 from arctic_tern.filename import parse_file_name, MigrationFile
 
 
-def migrate(dir: str, schema: str = None, dsn: str = None, **kwargs):
-    conn: connection = psycopg2.connect(dsn, **kwargs)
+def migrate(dir: str, conn: connection, schema: str = None):
     _prepare_meta_table(conn, schema)
     pm = _fetch_previous_migrations(_get_schema_cursor(conn, schema))
     pmi = iter(pm)
-    cm = next(pmi)
+    try:
+        cm = next(pmi)
+    except StopIteration:
+        cm = None
 
     for sql_file in _get_sql_files(dir):
         if sql_file.is_equal(cm):
@@ -27,8 +29,6 @@ def migrate(dir: str, schema: str = None, dsn: str = None, **kwargs):
             _execute_file(sql_file, curs)
             curs.close()
             conn.commit()
-
-    conn.close()
 
 
 def _execute_file(migration_file: MigrationFile, curs: cursor):
@@ -61,14 +61,16 @@ def _hash(file: str) -> str:
 
 
 def _prepare_meta_table(conn: connection, schema: str):
-    create = """CREATE TABLE IF NOT EXISTS arctic_tern_migrations
+    create = """CREATE TABLE IF NOT EXISTS {}.arctic_tern_migrations
                 (
                     stamp bigint NOT NULL PRIMARY KEY,
                     file_name varchar,
                     sha3 char(56),
                     migrate_time timestamptz
                 );"""
-    _execute_with_schema(conn, schema, create)
+    c2 = create.format(schema or 'public')
+    with conn.cursor() as curs:  # type: cursor
+        curs.execute(c2)
 
 
 def _fetch_previous_migrations(curs: cursor):

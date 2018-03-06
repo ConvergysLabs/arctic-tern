@@ -7,3 +7,8 @@ venv/
 # Pytest
 .pytest_cache/
 **/__pycache__/
+
+# Build / Distribution
+arctic_tern.egg-info/
+build/
+dist/

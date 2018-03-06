@@ -16,6 +16,9 @@ class MigrationFile:
                and self.hash_ == other.hash_
 
     def is_equal(self, other: 'MigrationFile'):
+        if other is None:
+            return False
+
         if self.stamp == other.stamp:
             if self.hash_ != other.hash_:
                 raise ValueError('Hash mismatch in file {}.  It has likely been modified.'.format(self.path))
