@@ -7,6 +7,7 @@ venv/
 # Pytest
 .pytest_cache/
 **/__pycache__/
+.coverage
 
 # Build / Distribution
 arctic_tern.egg-info/
