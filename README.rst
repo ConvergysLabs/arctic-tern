@@ -24,7 +24,7 @@ Arctic Tern officially supports Python 3.6+
 Installation
 ------------
 
-To install Requests, simply `pip install arctic-tern`
+To install Arctic Tern, simply `pip install arctic-tern`
 
 Documentation
 -------------
