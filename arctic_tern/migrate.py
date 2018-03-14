@@ -2,7 +2,6 @@ import hashlib
 import os
 from typing import List
 
-import psycopg2.extras
 from psycopg2.extensions import connection, cursor
 
 from arctic_tern.filename import parse_file_name, MigrationFile
@@ -19,7 +18,7 @@ def migrate(dir: str, conn: connection, schema: str = None):
 
     for sql_file in _get_sql_files(dir):
         if sql_file.is_equal(cm):
-            print('Skipping {}'.format(sql_file.path))
+            print(f'Skipping previously executed {sql_file.stamp} {sql_file.name}')
             try:
                 cm = next(pmi)
             except StopIteration:
@@ -32,11 +31,13 @@ def migrate(dir: str, conn: connection, schema: str = None):
 
 
 def _execute_file(migration_file: MigrationFile, curs: cursor):
+    print(f'Executing {migration_file.stamp} {migration_file.name}')
     with open(migration_file.path) as stream:
         curs.execute(stream.read())
 
     t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""
     curs.execute(t, [migration_file.stamp, migration_file.name, migration_file.hash_])
+    print(f'Finished {migration_file.stamp} {migration_file.name}!')
 
 
 def _get_sql_files(dir: str) -> List[MigrationFile]:
