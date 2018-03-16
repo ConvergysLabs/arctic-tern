@@ -2,6 +2,7 @@ import hashlib
 import os
 from typing import List
 
+import psycopg2
 from psycopg2.extensions import connection, cursor
 
 from arctic_tern.filename import parse_file_name, MigrationFile
@@ -32,8 +33,12 @@ def migrate(dir: str, conn: connection, schema: str = None):
 
 def _execute_file(migration_file: MigrationFile, curs: cursor):
     print(f'Executing {migration_file.stamp} {migration_file.name}')
-    with open(migration_file.path) as stream:
-        curs.execute(stream.read())
+    try:
+        with open(migration_file.path) as stream:
+            curs.execute(stream.read())
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        raise e
 
     t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""
     curs.execute(t, [migration_file.stamp, migration_file.name, migration_file.hash_])
@@ -104,6 +109,8 @@ def _get_schema_cursor(conn: connection, schema: str = None) -> cursor:
 
 
 if __name__ == "__main__":
-    migrate('../tests/scripts', dbname='mig', user='postgres', password='root')
-    migrate('../tests/scripts', dbname='mig', user='postgres', password='root', schema='tern')
+    pub = psycopg2.connect(dbname='mig', user='postgres', password='root')
+    migrate('../tests/scripts', conn=pub)
+    # tern = psycopg2.connect(dbname='mig', user='postgres', password='root', schema='tern')
+    migrate('../tests/scripts', conn=pub, schema='tern')
     # print(_get_sql_files('../tests/scripts'))
