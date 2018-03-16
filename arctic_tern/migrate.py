@@ -2,7 +2,7 @@ import hashlib
 import os
 from typing import List
 
-import psycopg2.extras
+import psycopg2
 from psycopg2.extensions import connection, cursor
 
 from arctic_tern.filename import parse_file_name, MigrationFile
@@ -19,7 +19,7 @@ def migrate(dir: str, conn: connection, schema: str = None):
 
     for sql_file in _get_sql_files(dir):
         if sql_file.is_equal(cm):
-            print('Skipping {}'.format(sql_file.path))
+            print(f'Skipping previously executed {sql_file.stamp} {sql_file.name}')
             try:
                 cm = next(pmi)
             except StopIteration:
@@ -32,11 +32,17 @@ def migrate(dir: str, conn: connection, schema: str = None):
 
 
 def _execute_file(migration_file: MigrationFile, curs: cursor):
-    with open(migration_file.path) as stream:
-        curs.execute(stream.read())
+    print(f'Executing {migration_file.stamp} {migration_file.name}')
+    try:
+        with open(migration_file.path) as stream:
+            curs.execute(stream.read())
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        raise e
 
     t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""
     curs.execute(t, [migration_file.stamp, migration_file.name, migration_file.hash_])
+    print(f'Finished {migration_file.stamp} {migration_file.name}!')
 
 
 def _get_sql_files(dir: str) -> List[MigrationFile]:
@@ -103,6 +109,8 @@ def _get_schema_cursor(conn: connection, schema: str = None) -> cursor:
 
 
 if __name__ == "__main__":
-    migrate('../tests/scripts', dbname='mig', user='postgres', password='root')
-    migrate('../tests/scripts', dbname='mig', user='postgres', password='root', schema='tern')
+    pub = psycopg2.connect(dbname='mig', user='postgres', password='root')
+    migrate('../tests/scripts', conn=pub)
+    # tern = psycopg2.connect(dbname='mig', user='postgres', password='root', schema='tern')
+    migrate('../tests/scripts', conn=pub, schema='tern')
     # print(_get_sql_files('../tests/scripts'))
