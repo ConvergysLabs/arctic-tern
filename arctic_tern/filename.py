@@ -10,17 +10,14 @@ class MigrationFile:
         self.hash_ = hash_
         self.path = None
 
-    def __eq__(self, other: 'MigrationFile'):
-        return self.stamp == other.stamp \
-               and self.name == other.name \
-               and self.hash_ == other.hash_
+    def is_after(self, other: 'MigrationFile'):
+        if other is None:
+            return False
+        return self.stamp > other.stamp
 
     def is_equal(self, other: 'MigrationFile'):
         if other is None:
             return False
-
-        if self.stamp > other.stamp:
-            return True
 
         if self.stamp == other.stamp:
             if self.hash_ != other.hash_:

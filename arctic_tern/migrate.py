@@ -12,18 +12,16 @@ def migrate(dir: str, conn: connection, schema: str = None):
     _prepare_meta_table(conn, schema)
     pm = _fetch_previous_migrations(_get_schema_cursor(conn, schema))
     pmi = iter(pm)
-    try:
-        cm = next(pmi)
-    except StopIteration:
-        cm = None
+    cm = _next_or_none(pmi)
 
     for sql_file in _get_sql_files(dir):
+        while sql_file.is_after(cm):
+            print(f'Ignoring historical migration {cm.stamp} {cm.name}')
+            cm = _next_or_none(pmi)
+
         if sql_file.is_equal(cm):
             print(f'Skipping previously executed {sql_file.stamp} {sql_file.name}')
-            try:
-                cm = next(pmi)
-            except StopIteration:
-                cm = None
+            cm = _next_or_none(pmi)
         else:
             curs = _get_schema_cursor(conn, schema)
             _execute_file(sql_file, curs)
@@ -31,8 +29,15 @@ def migrate(dir: str, conn: connection, schema: str = None):
             conn.commit()
 
 
+def _next_or_none(iterator):
+    try:
+        return next(iterator)
+    except StopIteration:
+        return None
+
+
 def _execute_file(migration_file: MigrationFile, curs: cursor):
-    print(f'Executing {migration_file.stamp} {migration_file.name}')
+    print(f'Executing migration {migration_file.stamp} {migration_file.name}')
     try:
         with open(migration_file.path) as stream:
             curs.execute(stream.read())
@@ -42,7 +47,7 @@ def _execute_file(migration_file: MigrationFile, curs: cursor):
 
     t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""
     curs.execute(t, [migration_file.stamp, migration_file.name, migration_file.hash_])
-    print(f'Finished {migration_file.stamp} {migration_file.name}!')
+    print(f'Finished migration {migration_file.stamp} {migration_file.name}!')
 
 
 def _get_sql_files(dir: str) -> List[MigrationFile]:
