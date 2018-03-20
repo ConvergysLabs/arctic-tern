@@ -27,6 +27,9 @@ class MigrationFile:
         else:
             return False
 
+    def __str__(self):
+        return f'Migration [{self.stamp} {self.name}]'
+
 
 def parse_file_name(name: str) -> MigrationFile:
     match_ = compile_.match(name)

@@ -60,6 +60,9 @@ def _get_sql_files(dir: str) -> List[MigrationFile]:
             file_info.path = full_path
             file_info.hash_ = _hash(full_path)
             file_list.append(file_info)
+
+    file_list.sort(key=lambda k: k.stamp)
+
     return file_list
 
 
@@ -115,7 +118,9 @@ def _get_schema_cursor(conn: connection, schema: str = None) -> cursor:
 
 if __name__ == "__main__":
     pub = psycopg2.connect(dbname='mig', user='postgres', password='root')
-    migrate('../tests/scripts', conn=pub)
+    for f in _get_sql_files('../tests/scripts'):
+        print(f)
+    # migrate('../tests/scripts', conn=pub)
     # tern = psycopg2.connect(dbname='mig', user='postgres', password='root', schema='tern')
-    migrate('../tests/scripts', conn=pub, schema='tern')
+    # migrate('../tests/scripts', conn=pub, schema='tern')
     # print(_get_sql_files('../tests/scripts'))
