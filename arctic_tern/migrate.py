@@ -85,7 +85,8 @@ def _prepare_meta_table(conn: connection, schema: str):
 
 
 def _fetch_previous_migrations(curs: cursor):
-    sql = """SELECT * FROM arctic_tern_migrations"""
+    sql = """SELECT * FROM arctic_tern_migrations ORDER BY stamp asc"""
+    print("NEWNEWNEW")
     curs.execute(sql)
 
     migrations = []
