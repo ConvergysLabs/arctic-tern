@@ -92,7 +92,7 @@ def _fetch_previous_migrations(curs: cursor):
         stamp = row[0]
         name = row[1]
         sha3 = row[2]
-        mf = MigrationFile(stamp, name, sha3)
+        mf = MigrationFile(stamp, name, None, sha3)
         migrations.append(mf)
 
     return migrations
