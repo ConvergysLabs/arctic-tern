@@ -1,5 +1,6 @@
-from arctic_tern.filename import parse_file_name
+from arctic_tern.filename import parse_file_name, construct_migration
 import pytest
+import os
 
 
 @pytest.mark.parametrize("test_filename,expected", [
@@ -11,9 +12,9 @@ import pytest
     ("2018022601.sql", [2018022601, None]),
 ])
 def test_hyphen(test_filename, expected):
-    migration_file = parse_file_name(test_filename)
-    assert migration_file.stamp == expected[0]
-    assert migration_file.name == expected[1]
+    stamp, label = parse_file_name(test_filename)
+    assert stamp == expected[0]
+    assert label == expected[1]
 
 
 @pytest.mark.parametrize("test_filename", [
@@ -23,3 +24,18 @@ def test_hyphen(test_filename, expected):
 def test_fails(test_filename):
     val = parse_file_name(test_filename)
     assert val is None
+
+
+@pytest.mark.parametrize("file_, stamp, label, hash_", [
+    ("1-person-address.sql", 1, "person-address", "be51b1ac168191cb6d3741c717ed71492f5a913b144170f1ca9fed82"),
+    ("2-add-apartment.sql", 2, "add-apartment", "714ac7e2ae171eddcb0687fd5fc81af95d83b9e49c8c48edc3d51be0"),
+    ("3-fail.sql", 3, "fail", "1ad019a8d4e278d5265b05ca19d9a6d17259f973a0ad053d3b4f2a19"),
+])
+def test_mf(file_, stamp, label, hash_):
+    dir_ = "tests/scripts"
+    mf = construct_migration(file_, dir_)
+    assert mf.stamp == stamp
+    assert mf.name == label
+    assert os.path.split(mf.path) == (dir_, file_)
+    assert mf.hash_ == hash_
+

@@ -1,4 +1,3 @@
-import hashlib
 import os
 from typing import List
 
@@ -8,23 +7,35 @@ from psycopg2.extensions import connection, cursor
 from arctic_tern.filename import parse_file_name, MigrationFile
 
 
-def migrate(dir: str, conn: connection, schema: str = None):
+def migrate(migration_dir: str, conn: connection, schema: str = None):
+    _migrate(_get_sql_files(migration_dir), conn, schema)
+
+
+def migrate_multi(migration_dirs: List[str], conn: connection, schema: str = None):
+    combined_migrations = []
+    for md in migration_dirs:
+        combined_migrations.extend(_get_sql_files(md))
+    _migrate(combined_migrations, conn, schema)
+
+
+def _migrate(migrations: List[MigrationFile], conn: connection, schema: str = None):
     _prepare_meta_table(conn, schema)
-    pm = _fetch_previous_migrations(_get_schema_cursor(conn, schema))
-    pmi = iter(pm)
-    cm = _next_or_none(pmi)
+    prev_mig = _fetch_previous_migrations(_get_schema_cursor(conn, schema))
+    prev_mig_iter = iter(prev_mig)
+    current_mig = _next_or_none(prev_mig_iter)
+    migrations.sort(key=lambda k: k.stamp)
 
-    for sql_file in _get_sql_files(dir):
-        while sql_file.is_after(cm):
-            print(f'Ignoring historical migration {cm.stamp} {cm.name}')
-            cm = _next_or_none(pmi)
+    for migration in migrations:
+        while migration.is_after(current_mig):
+            print(f'Ignoring historical migration {current_mig.stamp} {current_mig.name}')
+            current_mig = _next_or_none(prev_mig_iter)
 
-        if sql_file.is_equal(cm):
-            print(f'Skipping previously executed {sql_file.stamp} {sql_file.name}')
-            cm = _next_or_none(pmi)
+        if migration.is_equal(current_mig):
+            print(f'Skipping previously executed {migration.stamp} {migration.name}')
+            current_mig = _next_or_none(prev_mig_iter)
         else:
             curs = _get_schema_cursor(conn, schema)
-            _execute_file(sql_file, curs)
+            _execute_file(migration, curs)
             curs.close()
             conn.commit()
 
@@ -54,24 +65,11 @@ def _get_sql_files(dir: str) -> List[MigrationFile]:
     abs_dir = os.path.abspath(dir)
     file_list = []
     for fn in os.listdir(dir):
-        file_info = parse_file_name(fn)
+        file_info = parse_file_name(fn, abs_dir)
         if file_info:
-            full_path = os.path.join(abs_dir, fn)
-            file_info.path = full_path
-            file_info.hash_ = _hash(full_path)
             file_list.append(file_info)
 
-    file_list.sort(key=lambda k: k.stamp)
-
     return file_list
-
-
-def _hash(file: str) -> str:
-    sha3 = hashlib.sha3_224()
-    with open(file, "rb") as stream:
-        for chunk in iter(lambda: stream.read(65536), b""):
-            sha3.update(chunk)
-    return sha3.hexdigest()
 
 
 def _prepare_meta_table(conn: connection, schema: str):
