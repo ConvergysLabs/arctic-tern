@@ -27,11 +27,11 @@ def _migrate(migrations: List[MigrationFile], conn: connection, schema: str = No
 
     for migration in migrations:
         while migration.is_after(current_mig):
-            print(f'Ignoring historical migration {current_mig.stamp} {current_mig.name}')
+            print(f'IGNORE  {current_mig.stamp} {current_mig.name}')
             current_mig = _next_or_none(prev_mig_iter)
 
         if migration.is_equal(current_mig):
-            print(f'Skipping previously executed {migration.stamp} {migration.name}')
+            print(f'SKIP    {migration.stamp} {migration.name}')
             current_mig = _next_or_none(prev_mig_iter)
         else:
             curs = _get_schema_cursor(conn, schema)
@@ -48,7 +48,7 @@ def _next_or_none(iterator):
 
 
 def _execute_file(migration_file: MigrationFile, curs: cursor):
-    print(f'Executing migration {migration_file.stamp} {migration_file.name}')
+    print(f'EXECUTE {migration_file.stamp} {migration_file.name}')
     try:
         with open(migration_file.path) as stream:
             curs.execute(stream.read())
@@ -58,7 +58,6 @@ def _execute_file(migration_file: MigrationFile, curs: cursor):
 
     t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""
     curs.execute(t, [migration_file.stamp, migration_file.name, migration_file.hash_])
-    print(f'Finished migration {migration_file.stamp} {migration_file.name}!')
 
 
 def _get_sql_files(dir: str) -> List[MigrationFile]:
