@@ -4,7 +4,7 @@ from typing import List
 import psycopg2
 from psycopg2.extensions import connection, cursor
 
-from arctic_tern.filename import parse_file_name, MigrationFile
+from arctic_tern.filename import construct_migration, MigrationFile
 
 
 def migrate(migration_dir: str, conn: connection, schema: str = None):
@@ -64,7 +64,7 @@ def _get_sql_files(dir: str) -> List[MigrationFile]:
     abs_dir = os.path.abspath(dir)
     file_list = []
     for fn in os.listdir(dir):
-        file_info = parse_file_name(fn, abs_dir)
+        file_info = construct_migration(fn, abs_dir)
         if file_info:
             file_list.append(file_info)
 
@@ -72,16 +72,15 @@ def _get_sql_files(dir: str) -> List[MigrationFile]:
 
 
 def _prepare_meta_table(conn: connection, schema: str):
-    create = """CREATE TABLE IF NOT EXISTS {}.arctic_tern_migrations
+    create = f"""CREATE TABLE IF NOT EXISTS {schema or 'public'}.arctic_tern_migrations
                 (
                     stamp bigint NOT NULL PRIMARY KEY,
                     file_name varchar,
                     sha3 char(56),
                     migrate_time timestamptz
                 );"""
-    c2 = create.format(schema or 'public')
     with conn.cursor() as curs:  # type: cursor
-        curs.execute(c2)
+        curs.execute(create)
 
 
 def _fetch_previous_migrations(curs: cursor):
