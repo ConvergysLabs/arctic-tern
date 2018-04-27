@@ -1,14 +1,17 @@
 import re
+import os
+import hashlib
+from typing import Tuple
 
 compile_ = re.compile(r'(\d+)\s?[-_]?\s?([\w\s-]*)\.sql')
 
 
 class MigrationFile:
-    def __init__(self, stamp, name, hash_=None):
+    def __init__(self, stamp, name, path, hash_=None):
         self.stamp = stamp
         self.name = name
+        self.path = path
         self.hash_ = hash_
-        self.path = None
 
     def is_after(self, other: 'MigrationFile'):
         if other is None:
@@ -31,11 +34,29 @@ class MigrationFile:
         return f'Migration [{self.stamp} {self.name}]'
 
 
-def parse_file_name(name: str) -> MigrationFile:
+def construct_migration(name: str, abs_dir: str) -> MigrationFile:
+    try:
+        stamp, label = parse_file_name(name)
+        full_path = os.path.join(abs_dir, name)
+        hash_ = _hash(full_path)
+        mf = MigrationFile(stamp, label, full_path, hash_)
+        return mf
+    except TypeError:
+        return None
+
+
+def parse_file_name(name: str) -> Tuple[int, str]:
     match_ = compile_.match(name)
     if match_:
         stamp = int(match_.group(1))
-        name = match_.group(2) or None
-        mf = MigrationFile(stamp, name)
-        return mf
+        label = match_.group(2) or None
+        return stamp, label
     return None
+
+
+def _hash(file: str) -> str:
+    sha3 = hashlib.sha3_224()
+    with open(file, "rb") as stream:
+        for chunk in iter(lambda: stream.read(65536), b""):
+            sha3.update(chunk)
+    return sha3.hexdigest()
