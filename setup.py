@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='arctic_tern',
-    version='0.1.10',
+    version='0.1.11',
     packages=['arctic_tern'],
     url='https://github.com/ConvergysLabs/arctic-tern',
     license='MIT',
