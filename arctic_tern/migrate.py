@@ -33,14 +33,16 @@ def _migrate(migrations: List[MigrationFile], conn: connection, schema: str = No
             log.info(f'IGNORE  {current_mig.stamp} {current_mig.name}')
             current_mig = _next_or_none(prev_mig_iter)
 
+        stamp_match = False
         try:
-            is_equal = migration.is_equal(current_mig)
-        except ValueError as e:
-            log.error(f'Hash mismatch in schema {schema} file {migration.path}.  Expected {current_mig.hash_} got {migration.hash_}')
-            raise e
+            if migration.is_equal(current_mig):
+                log.info(f'SKIP    {migration.stamp} {migration.name}')
+                stamp_match = True
+        except ValueError:
+            log.warning(f'BADHASH {migration.stamp} {migration.name} Expected {current_mig.hash_} got {migration.hash_}')
+            stamp_match = True
 
-        if migration.is_equal(current_mig):
-            log.info(f'SKIP    {migration.stamp} {migration.name}')
+        if stamp_match:
             current_mig = _next_or_none(prev_mig_iter)
         else:
             curs = _get_schema_cursor(conn, schema)
