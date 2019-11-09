@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -5,6 +6,8 @@ import psycopg2
 from psycopg2.extensions import connection, cursor
 
 from arctic_tern.filename import construct_migration, MigrationFile
+
+log = logging.getLogger("arctic_tern.migrate")
 
 
 def migrate(migration_dir: str, conn: connection, schema: str = None):
@@ -27,11 +30,19 @@ def _migrate(migrations: List[MigrationFile], conn: connection, schema: str = No
 
     for migration in migrations:
         while migration.is_after(current_mig):
-            print(f'IGNORE  {current_mig.stamp} {current_mig.name}')
+            log.info(f'IGNORE  {current_mig.stamp} {current_mig.name}')
             current_mig = _next_or_none(prev_mig_iter)
 
-        if migration.is_equal(current_mig):
-            print(f'SKIP    {migration.stamp} {migration.name}')
+        stamp_match = False
+        try:
+            if migration.is_equal(current_mig):
+                log.info(f'SKIP    {migration.stamp} {migration.name}')
+                stamp_match = True
+        except ValueError:
+            log.warning(f'BADHASH {migration.stamp} {migration.name} Expected {current_mig.hash_} got {migration.hash_}')
+            stamp_match = True
+
+        if stamp_match:
             current_mig = _next_or_none(prev_mig_iter)
         else:
             curs = _get_schema_cursor(conn, schema)
@@ -48,12 +59,12 @@ def _next_or_none(iterator):
 
 
 def _execute_file(migration_file: MigrationFile, curs: cursor):
-    print(f'EXECUTE {migration_file.stamp} {migration_file.name}')
+    log.info(f'EXECUTE {migration_file.stamp} {migration_file.name}')
     try:
         with open(migration_file.path) as stream:
             curs.execute(stream.read())
     except psycopg2.Error as e:
-        print(e.pgerror)
+        log.error(e.pgerror)
         raise e
 
     t = """INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())"""

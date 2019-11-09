@@ -1,6 +1,6 @@
-import re
-import os
 import hashlib
+import os
+import re
 from typing import Tuple
 
 compile_ = re.compile(r'(\d+)\s?[-_]?\s?([\w\s-]*)\.sql')

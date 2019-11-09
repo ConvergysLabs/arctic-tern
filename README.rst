@@ -26,6 +26,14 @@ Installation
 
 To install Arctic Tern, simply `pip install arctic-tern`
 
+Publishing
+----------
+    python setup.py sdist bdist
+
+    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
+    twine upload dist/arctic_tern-0.1.11.tar.gz
+
 Documentation
 -------------
 
