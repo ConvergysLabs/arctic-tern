@@ -45,17 +45,18 @@ async def _migrate(migrations: List[MigrationFile], conn: Connection, schema):
 
     for migration in migrations:
         while migration.is_after(current_mig):
-            log.info(f'IGNORE  {current_mig.stamp} {current_mig.name}')
+            log.info(f"IGNORE  {current_mig.stamp} {current_mig.name}")
             current_mig = _next_or_none(prev_mig_iter)
 
         stamp_match = False
         try:
             if migration.is_equal(current_mig):
-                log.info(f'SKIP    {migration.stamp} {migration.name}')
+                log.info(f"SKIP    {migration.stamp} {migration.name}")
                 stamp_match = True
         except ValueError:
             log.warning(
-                f'BADHASH {migration.stamp} {migration.name} Expected {current_mig.hash_} got {migration.hash_}')
+                f"BADHASH {migration.stamp} {migration.name} Expected {current_mig.hash_} got {migration.hash_}"
+            )
             stamp_match = True
 
         if stamp_match:
@@ -72,7 +73,7 @@ def _next_or_none(iterator):
 
 
 async def _execute_file(migration_file: MigrationFile, conn: Connection):
-    log.info(f'EXECUTE {migration_file.stamp} {migration_file.name}')
+    log.info(f"EXECUTE {migration_file.stamp} {migration_file.name}")
 
     try:
         async with conn.transaction():
@@ -81,7 +82,9 @@ async def _execute_file(migration_file: MigrationFile, conn: Connection):
                 await conn.execute(migration_sql)
 
         insert_sql = "INSERT INTO arctic_tern_migrations VALUES ($1, $2, $3, now())"
-        await conn.execute(insert_sql, migration_file.stamp, migration_file.name, migration_file.hash_)
+        await conn.execute(
+            insert_sql, migration_file.stamp, migration_file.name, migration_file.hash_
+        )
     except PostgresError as e:
         log.error(e)
         raise e
@@ -113,12 +116,7 @@ async def _fetch_previous_migrations(conn: Connection):
     sql = "SELECT * FROM arctic_tern_migrations ORDER BY stamp asc"
 
     migrations = [
-        MigrationFile(
-            record["stamp"],
-            record["file_name"],
-            None,
-            record["sha3"]
-        )
+        MigrationFile(record["stamp"], record["file_name"], None, record["sha3"])
         for record in await conn.fetch(sql)
     ]
 
