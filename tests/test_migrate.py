@@ -1,37 +1,58 @@
-from arctic_tern.migrate import migrate, migrate_multi
+from unittest.mock import AsyncMock, call
+
 import pytest
-from unittest.mock import MagicMock, call
+from asyncpg.connection import Connection
+
+from arctic_tern.migrate import migrate, migrate_multi
+
+# All test coroutines will be treated as marked.
+pytestmark = pytest.mark.asyncio
 
 
-def test_migrate():
-    conn = MagicMock()
-    migrate("tests/other", conn)
+async def test_migrate():
+    conn = AsyncMock(Connection)
+    create_sql = f"""CREATE TABLE IF NOT EXISTS public.arctic_tern_migrations
+                (
+                    stamp bigint NOT NULL PRIMARY KEY,
+                    file_name varchar,
+                    sha3 char(56),
+                    migrate_time timestamptz
+                );"""
     calls = [
-        call('SELECT * FROM arctic_tern_migrations ORDER BY stamp asc'),
-        call('ALTER TABLE address ADD COLUMN apartment varchar;'),
-        call('INSERT INTO arctic_tern_migrations VALUES (%s, %s, %s, now())', [2, 'add-apartment', '714ac7e2ae171eddcb0687fd5fc81af95d83b9e49c8c48edc3d51be0'])
+        call(create_sql),
+        call("ALTER TABLE address ADD COLUMN apartment varchar;"),
+        call(
+            "INSERT INTO arctic_tern_migrations VALUES ($1, $2, $3, now())",
+            2,
+            "add-apartment",
+            "714ac7e2ae171eddcb0687fd5fc81af95d83b9e49c8c48edc3d51be0",
+        ),
     ]
-    conn.cursor().execute.assert_has_calls(calls)
+
+    await migrate("tests/other", conn)
+
+    conn.fetch.assert_awaited_with(
+        "SELECT * FROM arctic_tern_migrations ORDER BY stamp asc"
+    )
+    conn.execute.assert_has_awaits(calls)
 
 
-@pytest.mark.parametrize("dirs", [
-    (["tests/scripts", "tests/other"]),
-    (["tests/other", "tests/scripts"]),
-])
-def test_migrate_multi(dirs):
-    conn = MagicMock()
+@pytest.mark.parametrize(
+    "dirs", [(["tests/scripts", "tests/other"]), (["tests/other", "tests/scripts"]),]
+)
+async def test_migrate_multi(dirs):
+    conn = AsyncMock(Connection)
     expected = [
-        [1, "person-address"],
-        [2, "add-apartment"],
-        [3, "fail"],
+        (1, "person-address"),
+        (2, "add-apartment"),
+        (3, "fail"),
     ]
 
     def check(sql, *args):
         if sql.startswith("INSERT INTO arctic_tern_migrations"):
             e = expected.pop(0)
-            assert e == args[0][:2]
+            assert e == args[:2]
 
-    conn.cursor().execute.side_effect = check
+    conn.execute.side_effect = check
 
-    migrate_multi(dirs, conn)
-
+    await migrate_multi(dirs, conn)
