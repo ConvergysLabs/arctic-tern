@@ -8,7 +8,6 @@ before_install:
 # command to install dependencies
 install:
   - poetry install -v -E psycopg -E asyncpg
-  - poetry install codecov
 
 # command to run tests
 script:
