@@ -1,5 +1,0 @@
-asyncpg
-twine
-pytest
-pytest-asyncio
-pytest-cov

@@ -1,13 +1,18 @@
 language: python
 python:
-  - "3.6"
+  - "3.8"
+
+before_install:
+- pip install poetry
+
 # command to install dependencies
 install:
-  - pip install codecov
-  - pip install -r requirements.txt
+  - poetry install -v
+  - poetry install codecov
+
 # command to run tests
 script:
-  - python -m pytest --cov=arctic_tern/
+  - poetry run pytest --cov=arctic_tern/
 
 after_success:
-  - codecov
+  - poetry run codecov
