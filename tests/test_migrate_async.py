@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, call
 import pytest
 from asyncpg.connection import Connection
 
-from arctic_tern.migrate import migrate, migrate_multi
+from arctic_tern._migrate_asyncpg import migrate, migrate_multi
 
 # All test coroutines will be treated as marked.
 pytestmark = pytest.mark.asyncio
