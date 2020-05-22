@@ -9,8 +9,12 @@ homepage = "https://github.com/ConvergysLabs/arctic-tern"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-psycopg2 = { "^2.7", optional = true }
-asyncpg = { "^0.20.1", optional = true }
+psycopg2 = { version = "^2.7", optional = true }
+asyncpg = { version = "^0.20.1", optional = true }
+
+[tool.poetry.extras]
+asyncpg = ["asyncpg"]
+psycopg = ["psycopg2"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
