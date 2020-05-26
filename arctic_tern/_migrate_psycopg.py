@@ -121,13 +121,3 @@ def _get_schema_cursor(conn: connection, schema: str = None) -> cursor:
     if schema:
         curs.execute('SET search_path TO %s', [schema])
     return curs
-
-
-if __name__ == "__main__":
-    pub = psycopg2.connect(dbname='mig', user='postgres', password='root')
-    for f in _get_sql_files('../tests/scripts'):
-        print(f)
-    # migrate('../tests/scripts', conn=pub)
-    # tern = psycopg2.connect(dbname='mig', user='postgres', password='root', schema='tern')
-    # migrate('../tests/scripts', conn=pub, schema='tern')
-    # print(_get_sql_files('../tests/scripts'))

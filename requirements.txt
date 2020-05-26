@@ -1,4 +1,0 @@
-psycopg2-binary
-twine
-pytest
-pytest-cov

@@ -18,21 +18,42 @@ Feature Support
 - Plain SQL update scripts
 - Timestamped update scripts
 - Code-level integration (no CLI needed)
+- Asyncio compatibiltity using asyncpg_
 
-Arctic Tern officially supports Python 3.6+
+Arctic Tern officially supports Python 3.8+
 
 Installation
 ------------
 
-To install Arctic Tern, simply `pip install arctic-tern`
+To install Arctic Tern, simply::
 
-Publishing
-----------
-    python setup.py sdist bdist
+    $ pip install arctic-tern
 
-    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
-    twine upload dist/arctic_tern-0.1.11.tar.gz
+How to Contribute
+-----------------
+
+Arctic Tern uses poetry_ for dependency management and packaging.
+To install::
+
+    $ poetry install
+
+To install with asyncpg_::
+
+    $ poetry install -E asyncpg
+
+To install with psycopg_::
+
+    $ poetry install -E psycopg
+
+To build the distributable::
+
+    $ poetry build
+
+To publish the package to PyPI_::
+
+    $ poetry publish
+
 
 Documentation
 -------------
@@ -40,7 +61,7 @@ Documentation
 Documentation is good!  We should get some.
 
 
-How to Contribute
------------------
-
-This would also be good.
+.. _poetry: https://python-poetry.org/
+.. _asyncpg: https://github.com/MagicStack/asyncpg
+.. _psycopg: https://www.psycopg.org/
+.. _PyPI: https://pypi.org/project/arctic-tern/

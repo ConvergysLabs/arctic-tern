@@ -1,4 +1,4 @@
-from arctic_tern.migrate import migrate, migrate_multi
+from arctic_tern._migrate_psycopg import migrate, migrate_multi
 import pytest
 from unittest.mock import MagicMock, call
 
@@ -34,4 +34,3 @@ def test_migrate_multi(dirs):
     conn.cursor().execute.side_effect = check
 
     migrate_multi(dirs, conn)
-
